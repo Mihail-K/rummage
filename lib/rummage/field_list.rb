@@ -48,6 +48,12 @@ module Rummage
       end
     end
 
+    def build_order_params(orders)
+      orders.map do |field, value|
+        build_order_for_param(field.to_s, value.to_s)
+      end
+    end
+
   protected
 
     def fields
@@ -59,12 +65,12 @@ module Rummage
     end
 
     def build_query_for_param(field, value)
-      if fields.include?(field.to_s)
+      if fields.include?(field)
         QueryParam.new(build_query_condition(field, value), nil)
       else
         # Find a field-list with a matching prefix.
         field_list = associations.values.select do |field_list|
-          field.to_s.starts_with?(field_list.prefix)
+          field.starts_with?(field_list.prefix)
         end
 
         field_list = field_list.first
@@ -146,6 +152,36 @@ module Rummage
         # Match with only a wildcard before the partial.
         partial = ActiveRecord::Base.send(:sanitize_sql_like, value['ends_with'].to_s)
         model.arel_table[field].matches("%#{partial}")
+      end
+    end
+
+    def build_order_for_param(field, value)
+      value = value.downcase
+      value = 'asc' unless %(asc desc).include?(value)
+
+      if fields.include?(field)
+        OrderParam.new(model.arel_table[field].send(value), nil)
+      else
+        # Find a field-list with a matching prefix.
+        field_list = associations.values.select do |field_list|
+          field.starts_with?(field_list.prefix)
+        end
+
+        field_list = field_list.first
+        return nil if field_list.nil?
+
+        # Search the child field-list for searchable field and construct an order parameter.
+        query_param = field_list.build_order_for_param(field.sub(field_list.prefix, ''), value)
+        return nil if query_param.nil?
+
+        # Add the current assocation to the joins chain.
+        if query_param.joins.nil?
+          query_param.joins = field_list.name.to_sym
+        else
+          query_param.joins = { field_list.name.to_sym => query_param.joins }
+        end
+
+        query_param
       end
     end
   end

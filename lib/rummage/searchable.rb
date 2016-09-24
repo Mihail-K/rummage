@@ -8,7 +8,7 @@ module Rummage
       }
 
       scope :search, -> (params) {
-        all.search_with_params(params)
+        all.apply_search_and_order(params)
       }
     end
   end
