@@ -1,5 +1,18 @@
-require "rummage/version"
+
+require 'active_record'
+
+require 'rummage/version'
+require 'rummage/field_list'
+require 'rummage/searchable'
+
+require 'rummage/ext/active_record/relation'
 
 module Rummage
-  # Your code goes here...
+
+end
+
+module ActiveRecord
+  class Relation
+    include RummageExtensions
+  end
 end
