@@ -3,11 +3,11 @@ module Rummage
     extend ActiveSupport::Concern
 
     included do
-      scope :search_in, -> (*params) {
+      scope Rummage::Config.search_in_name, -> (*params) {
         all.reveal_in_field_list(params)
       }
 
-      scope :search, -> (params) {
+      scope Rummage::Config.search_name, -> (params) {
         all.apply_search_and_order(params)
       }
     end

@@ -10,16 +10,18 @@ module ActiveRecord
         @searchable_fields ||= Rummage::FieldList.new(klass)
       end
 
-      def apply_search_and_order(params)
+      def apply_filter_and_order(params)
         return self if params.blank?
-        search_with_params(params.except(:_order, '_order'))
-        order_with_params(params[:_order] || params['_order'])
+        params = params.deep_stringify_keys
+        apply_filter_with_params(params.except(Rummage::Config.order_key))
+        apply_order_with_params(params[Rummage::Config.order_key])
       end
 
-      def search_with_params(params)
+      def apply_filter_with_params(params)
         return self if params.blank?
         searchable_fields.build_query_params(params)
                          .reject(&:nil?)
+                         .first(Rummage::Config.filter_limit.to_i)
                          .each do |query_param|
                            joins!(query_param.joins) if query_param.joins.present?
                          end
@@ -29,10 +31,11 @@ module ActiveRecord
                          .last
       end
 
-      def order_with_params(params)
+      def apply_order_with_params(params)
         return self if params.blank?
         searchable_fields.build_order_params(params)
                          .reject(&:nil?)
+                         .first(Rummage::Config.order_limit.to_i)
                          .each do |query_param|
                            joins!(query_param.joins) if query_param.joins.present?
                          end

@@ -2,6 +2,7 @@
 require 'active_record'
 
 require 'rummage/version'
+require 'rummage/config'
 require 'rummage/builder'
 require 'rummage/field_list'
 require 'rummage/searchable'
