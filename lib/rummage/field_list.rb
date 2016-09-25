@@ -66,7 +66,8 @@ module Rummage
 
     def build_query_for_param(field, value)
       if fields.include?(field)
-        QueryParam.new(build_query_condition(field, value), nil)
+        condition = build_query_condition(field, value)
+        QueryParam.new(condition, nil) unless condition.nil?
       else
         # Find a field-list with a matching prefix.
         field_list = associations.values.select do |field_list|
@@ -93,65 +94,21 @@ module Rummage
 
     def build_query_condition(field, value)
       if value.is_a?(Hash)
-        value = value.deep_stringify_keys
-
-        # Negated Queries.
-        return build_query_not_condition(field, value) if value.key?('not')
-
-        # Read the column type to determine allowable queries.
+        value       = value.deep_stringify_keys
         column_type = model.columns_hash[field].type.to_s
 
-        # Relational Queries.
-        if %w(integer float decimal datetime time date).include?(column_type)
-          result = build_query_relation_condition(field, value)
-          return result unless result.nil?
-        end
-
-        # Partial Match Queries.
-        if %w(string text).include?(column_type)
-          result = build_query_like_condition(field, value)
-          return result unless result.nil?
-        end
+        # Find a registered query builder and construct the query.
+        value.keys.map { |name| Rummage::Builder.query_for(name, column_type) }
+                  .reject(&:nil?)
+                  .first(1)
+                  .map { |builder| builder.apply(self, field, value) }
+                  .first
       elsif value.is_a?(Array)
         # Generate a field IN (...) query.
         model.arel_table[field].in(value)
       else
         # Generate an exact match query.
         model.arel_table[field].eq(value)
-      end
-    end
-
-    def build_query_not_condition(field, value)
-      if value.is_a?(Array)
-        model.arel_table[field].not_in(value['not'])
-      else
-        model.arel_table[field].not_eq(value['not'])
-      end
-    end
-
-    def build_query_relation_condition(field, value)
-      # Generate queries for all allowed operations.
-      queries = %w(lt lteq gt gteq).map do |op|
-        model.arel_table[field].send("#{op}", value[op]) if value.key?(op)
-      end.reject(&:nil?)
-
-      # Join queries with AND operations.
-      return queries.reduce(:and) if queries.present?
-    end
-
-    def build_query_like_condition(field, value)
-      if value.key?('like')
-        # Match with wildcards both before and after the partial.
-        partial = ActiveRecord::Base.send(:sanitize_sql_like, value['like'].to_s)
-        model.arel_table[field].matches("%#{partial}%")
-      elsif value.key?('starts_with')
-        # Match with only a wildcard after the partial.
-        partial = ActiveRecord::Base.send(:sanitize_sql_like, value['starts_with'].to_s)
-        model.arel_table[field].matches("#{partial}%")
-      elsif value.key?('ends_with')
-        # Match with only a wildcard before the partial.
-        partial = ActiveRecord::Base.send(:sanitize_sql_like, value['ends_with'].to_s)
-        model.arel_table[field].matches("%#{partial}")
       end
     end
 

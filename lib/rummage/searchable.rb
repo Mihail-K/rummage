@@ -3,7 +3,7 @@ module Rummage
     extend ActiveSupport::Concern
 
     included do
-      scope :reveal, -> (*params) {
+      scope :search_in, -> (*params) {
         all.reveal_in_field_list(params)
       }
 
