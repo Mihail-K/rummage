@@ -20,9 +20,51 @@ Or install it yourself as:
 
     $ gem install rummage
 
-## Usage
+## What is Rummage?
 
-TODO: Write usage instructions here
+### Rummage is: For Rails
+Rummage gives your ActiveRecord models some wicked new powers like searching and sorting with ease. 
+For example, if you wanted to find every user whose email started with 'john', Rummage makes this trivial.
+```ruby
+User.search_in(:email).search(email: { starts_with: 'john' })
+```
+
+Which quickly produces a SQL query that looks like:
+```sql
+SELECT "users".* FROM "users" WHERE ("users"."email" LIKE 'john%')
+```
+
+Rummage does all the heavy lifting for you.
+
+### Rummage is: Plug and Play
+Include Rummage in your models
+```ruby
+class User < ActiveRecord::Base
+  include Rummage::Search
+end
+```
+
+Rummage requires no special configuration.
+
+### Rummage is: Customizable
+Rummage can be extended and made even more powerful by using your own query builders.
+
+```ruby
+Rummage::Builder.define do
+  # Define a 'between' query builder, that works for integers, floats, and dates.
+  query :between, types: %w(integer float date) do |field, value|
+    if value.is_a?(Array) && value.length == 2
+      model.arel_table[field].between(value[0], value[1])
+    end
+  end
+end
+```
+
+
+```ruby
+# Find users whose date-of-birth is between 50 and 15 years ago.
+User.search_in(:date_of_birth).search(date_of_birth: { between: [50.years.ago, 15.years.ago] })
+```
 
 ## Development
 
@@ -32,7 +74,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/rummage.
+Bug reports and pull requests are welcome on GitHub at https://github.com/Mihail-K/rummage.
 
 
 ## License
