@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Mihail-K"]
   spec.email         = ["mihail@platterz.ca"]
 
-  spec.summary       = %q(Quickly search and sort through Rails models.)
+  spec.summary       = %q(Magically sort and search though ActiveRecord models.)
   spec.description   = spec.description
   spec.homepage      = "TODO: Put your gem's website or public repo URL here."
   spec.license       = "MIT"
